@@ -41,7 +41,7 @@ const drums = new Howl({
   }
 
   function playKey(event) {
-    const sounds ={
+    const sounds = {
       'Digit1': 'clap',
       'Digit2': 'crash',
       'Digit3': 'open-hihat',
