@@ -40,13 +40,28 @@ const drums = new Howl({
     }
   }
 
+  function playKey(event) {
+    const sounds ={
+      'Digit1': 'clap',
+      'Digit2': 'crash',
+      'Digit3': 'open-hihat',
+      'Digit4': 'kick',
+      'Digit5': 'snare',
+      'Digit6': 'closed-hihat'
+    }
+    if (event.code in sounds) {
+      event.preventDefault();
+      drums.play(sounds[event.code]);
+    }
+  }
+
   function setViewportHeight() {
     let vh = window.innerHeight * 0.01;
     console.log(vh);
     document.documentElement.style.setProperty('--vh', `${vh}px`);
   }
 
-  
+
   setViewportHeight();
   window.addEventListener('resize', () => {
     setTimeout(setViewportHeight, 100);
@@ -54,3 +69,5 @@ const drums = new Howl({
 
   drumkit.addEventListener('click', playDrum);
   drumkit.addEventListener('touchstart', playDrum);
+
+  document.addEventListener('keydown', playKey);
