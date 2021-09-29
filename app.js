@@ -55,7 +55,7 @@ async function playButton(button) {
     'b5': 64,
     'b6': 65,
   }
-  drums.play(buttonToSound[button]);
+  drums.play(buttonToSound[button], 0, { gain: 10 });
 }
 
 async function playDrum(event) {
