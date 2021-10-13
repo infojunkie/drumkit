@@ -32,23 +32,26 @@
 
 let drums = null;
 let buttons = null;
+const config = {}
 
-function loadSoundFonts() {
-  return new Promise(resolve => {
-    fetch('/soundfonts.json')
-      .then(response => response.json())
-      .then(json => resolve(json));
-  });
+async function loadSoundFonts(instrument) {
+  let soundFont = await fetch('/soundfonts.json')
+    .then(data => data.json())
+    .then(json => json)
+  return soundFont[instrument]
 }
 
-async function loadButtons(instrument) {
-  var config = await loadConfig();
-  return config[instrument][0];
+async function loadConfig(instrument) {
+  if (!config[instrument]) {
+    config[instrument] = await loadSoundFonts(instrument);
+  }
+  return config[instrument];
 }
 
-async function loadInstrument(instrument, soundFont) {
+async function loadInstrument(instrument) {
   return new Promise((resolve, reject) => {
-    Soundfont.instrument(new AudioContext(), instrument, { soundfont: soundFont, nameToUrl: function(name, soundfont, format) {
+    let soundfont = config[instrument].soundfont
+    Soundfont.instrument(new AudioContext(), instrument, { soundfont: soundfont, nameToUrl: function(name, soundfont, format) {
       format = format || 'mp3';
       return `/drums/${soundfont}/${name}-${format}.js`;
     }})
@@ -60,12 +63,12 @@ async function loadInstrument(instrument, soundFont) {
 
 async function playButton(button) {
   let instrument = 'doumbek';
-  let soundfont = 'Doumbek-Faisal';
+  let percussionSet = await loadConfig(instrument);
   if (!drums) {
-    drums = await loadInstrument(instrument, soundfont);
+    drums = await loadInstrument(instrument);
   }
   if (!buttons) {
-    buttons = await loadButtons(instrument);
+    buttons = percussionSet.buttons;
   }
   drums.play(buttons[button], 0, { gain: 10 });
 }

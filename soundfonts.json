@@ -1,6 +1,7 @@
 {
-  "doumbek":[
-    {
+  "doumbek": {
+    "soundfont": "Doumbek-Faisal",
+    "buttons": {
       "b1":60,
       "b2":61,
       "b3":62,
@@ -8,5 +9,5 @@
       "b5":64,
       "b6":65
     }
-  ]
+  }
 }
