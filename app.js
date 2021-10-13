@@ -31,9 +31,24 @@
 // 74 - Soft Tek Front
 
 let drums = null;
-async function loadInstrument() {
+let buttons = null;
+
+function loadSoundFonts() {
+  return new Promise(resolve => {
+    fetch('/soundfonts.json')
+      .then(response => response.json())
+      .then(json => resolve(json));
+  });
+}
+
+async function loadButtons(instrument) {
+  var config = await loadConfig();
+  return config[instrument][0];
+}
+
+async function loadInstrument(instrument, soundFont) {
   return new Promise((resolve, reject) => {
-    Soundfont.instrument(new AudioContext(), 'doumbek', { soundfont: 'Doumbek-Faisal', nameToUrl: function(name, soundfont, format) {
+    Soundfont.instrument(new AudioContext(), instrument, { soundfont: soundFont, nameToUrl: function(name, soundfont, format) {
       format = format || 'mp3';
       return `/drums/${soundfont}/${name}-${format}.js`;
     }})
@@ -44,18 +59,15 @@ async function loadInstrument() {
 }
 
 async function playButton(button) {
+  let instrument = 'doumbek';
+  let soundfont = 'Doumbek-Faisal';
   if (!drums) {
-    drums = await loadInstrument();
+    drums = await loadInstrument(instrument, soundfont);
   }
-  const buttonToSound = {
-    'b1': 60,
-    'b2': 61,
-    'b3': 62,
-    'b4': 63,
-    'b5': 64,
-    'b6': 65,
+  if (!buttons) {
+    buttons = await loadButtons(instrument);
   }
-  drums.play(buttonToSound[button], 0, { gain: 10 });
+  drums.play(buttons[button], 0, { gain: 10 });
 }
 
 async function playDrum(event) {
