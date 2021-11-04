@@ -1,13 +1,18 @@
 {
-  "doumbek": {
-    "soundfont": "Doumbek-Faisal",
-    "buttons": {
-      "b1":60,
-      "b2":61,
-      "b3":62,
-      "b4":63,
-      "b5":64,
-      "b6":65
+  "Doumbek-Faisal": {
+    "doumbek": {
+      "buttons": {
+        "60":	"Doum Back",
+        "61":	"Doum Front",
+        "62":	"Finger Doum Back",
+        "63":	"Finger Doum Front",
+        "64":	"Rim Doum Front",
+        "65":	"Tek Front",
+        "66":	"Soft Tek Front",
+        "67":	"Half Tek Front",
+        "68":	"Slap Front",
+        "69":	"Half Slap Front"
+      }
     }
   }
 }

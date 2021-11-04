@@ -33,25 +33,34 @@
 let drums = null;
 let buttons = null;
 const config = {}
+const DEFAULT_SOUNDFONT =  'Doumbek-Faisal';
+const DEFAULT_INSTRUMENT = 'doumbek';
+const DEFAULT_BUTTONS = {
+  "b1": 64,
+  "b2": 65,
+  "b3": 66,
+  "b4": 67,
+  "b5": 68,
+  "b6": 69
+};
 
-async function loadSoundFonts(instrument) {
-  let soundFont = await fetch('/soundfonts.json')
+async function loadSoundFonts(soundfont) {
+  const soundFonts = await fetch('/soundfonts.json')
     .then(data => data.json())
     .then(json => json)
-  return soundFont[instrument]
+  return soundFonts[soundfont]
 }
 
-async function loadConfig(instrument) {
-  if (!config[instrument]) {
-    config[instrument] = await loadSoundFonts(instrument);
+async function loadConfig(soundfont, instrument) {
+  if (!config[soundfont]) {
+    config[soundfont] = await loadSoundFonts(soundfont);
   }
-  return config[instrument];
+  return config[soundfont][instrument];
 }
 
-async function loadInstrument(instrument) {
+async function loadInstrument() {
   return new Promise((resolve, reject) => {
-    let soundfont = config[instrument].soundfont
-    Soundfont.instrument(new AudioContext(), instrument, { soundfont: soundfont, nameToUrl: function(name, soundfont, format) {
+    Soundfont.instrument(new AudioContext(), DEFAULT_INSTRUMENT, { soundfont: DEFAULT_SOUNDFONT, nameToUrl: function(name, soundfont, format) {
       format = format || 'mp3';
       return `/drums/${soundfont}/${name}-${format}.js`;
     }})
@@ -61,14 +70,24 @@ async function loadInstrument(instrument) {
   });
 }
 
+function mapButtons(availableButtons) {
+  const selected = Object.keys(availableButtons).slice(0, 6)
+  const buttons = {}
+  let i = 0;
+  Object.keys(DEFAULT_BUTTONS).forEach((key)=> {
+    buttons[key] = selected[i]
+    i += 1;
+  });
+  return buttons;
+}
+
 async function playButton(button) {
-  let instrument = 'doumbek';
-  let percussionSet = await loadConfig(instrument);
   if (!drums) {
-    drums = await loadInstrument(instrument);
+    drums = await loadInstrument();
   }
+  let percussionSet = await loadConfig(DEFAULT_SOUNDFONT, DEFAULT_INSTRUMENT);
   if (!buttons) {
-    buttons = percussionSet.buttons;
+    buttons = mapButtons(percussionSet.buttons);
   }
   drums.play(buttons[button], 0, { gain: 10 });
 }
