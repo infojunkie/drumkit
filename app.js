@@ -20,7 +20,7 @@ let drums = null;
 
 async function loadSoundFonts() {
   if (!soundfonts) {
-    soundfonts = await fetch('/soundfonts.json')
+    soundfonts = await fetch('soundfonts.json')
       .then(data => data.json())
       .then(json => json)
   }
@@ -30,7 +30,7 @@ async function loadInstrument() {
   return new Promise((resolve, reject) => {
     Soundfont.instrument(new AudioContext(), instrument, { soundfont, nameToUrl: function(name, sf, format) {
       format = format || 'mp3';
-      return `/drums/${sf}/${name}-${format}.js`;
+      return `drums/${sf}/${name}-${format}.js`;
     }})
     .then(instrument => {
       resolve(instrument);
