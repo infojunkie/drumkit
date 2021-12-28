@@ -1,15 +1,15 @@
 const DEFAULT_SOUNDFONT =  'Doumbek-Faisal';
 const DEFAULT_INSTRUMENT = 'doumbek';
 const DEFAULT_BUTTONS = {
-  "b1": 60,
-  "b2": 61,
-  "b3": 62,
-  "b4": 63,
-  "b5": 64,
-  "b6": 65
+  'b1': 60,
+  'b2': 61,
+  'b3': 62,
+  'b4': 63,
+  'b5': 64,
+  'b6': 65
 };
 
-// soundfonts.json
+// Available soundfonts
 let soundfonts = null;
 
 // Current values
@@ -65,6 +65,29 @@ async function playKey(event) {
     event.preventDefault();
     playButton(keys[event.code]);
   }
+  if (event.key === 'Escape') {
+    document.querySelectorAll('select.sound').forEach(e => e.remove());
+  }
+}
+
+function selectDrum(event) {
+  if (event.target.classList.contains('pad')) {
+    const select = document.createElement('select');
+    select.classList.add('sound');
+    select.addEventListener('change', () => {
+      buttons[event.target.dataset.button] = Number(select.options[select.selectedIndex].value);
+      select.remove();
+    });
+    for (sound in soundfonts[soundfont][instrument]['sounds']) {
+      const option = document.createElement('option')
+      option.value = sound;
+      option.text = soundfonts[soundfont][instrument]['sounds'][sound];
+      option.disabled = Object.values(buttons).filter(s => s !== buttons[event.target.dataset.button]).includes(Number(sound));
+      select.appendChild(option);
+    }
+    select.value = buttons[event.target.dataset.button];
+    event.target.appendChild(select);
+  }
 }
 
 function setViewportHeight() {
@@ -78,10 +101,13 @@ window.addEventListener('DOMContentLoaded', async () => {
     setTimeout(setViewportHeight, 100);
   });
 
-  const drumkit = document.querySelector('.drumkit');
+  const drumkit = document.getElementById('drumkit');
   drumkit.addEventListener('click', playDrum);
   drumkit.addEventListener('touchstart', playDrum);
-
+  const hammer = new Hammer(drumkit, {
+    recognizers: [[Hammer.Press, { time: 1500 }]]
+  });
+  hammer.on('press', selectDrum);
   document.addEventListener('keydown', playKey);
 
   await loadSoundFonts();
