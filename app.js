@@ -30,7 +30,7 @@ async function loadInstrument() {
   return new Promise((resolve, reject) => {
     Soundfont.instrument(new AudioContext(), instrument, { soundfont, nameToUrl: function(name, sf, format) {
       format = format || 'mp3';
-      return `drums/${sf}/${name}-${format}.js`;
+      return `sounds/${sf}/${name}-${format}.js`;
     }})
     .then(instrument => {
       resolve(instrument);
@@ -55,6 +55,7 @@ async function playDrum(event) {
 
 function removeSoundSelect() {
   document.querySelectorAll('select.sound').forEach(e => e.remove());
+  document.querySelectorAll('img.icon').forEach(e => e.hidden = false);
 }
 
 async function playKey(event) {
@@ -82,6 +83,7 @@ function selectDrum(event) {
     select.addEventListener('change', () => {
       buttons[event.target.dataset.button] = Number(select.options[select.selectedIndex].value);
       select.remove();
+      event.target.querySelectorAll('img.icon').forEach(e => e.hidden = false);
     });
     for (sound in soundfonts[soundfont][instrument]['sounds']) {
       const option = document.createElement('option')
@@ -91,6 +93,7 @@ function selectDrum(event) {
       select.appendChild(option);
     }
     select.value = buttons[event.target.dataset.button];
+    event.target.querySelectorAll('img.icon').forEach(e => e.hidden = true);
     event.target.appendChild(select);
   }
 }
