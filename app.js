@@ -48,8 +48,13 @@ async function playButton(button) {
 async function playDrum(event) {
   if (event.target.classList.contains('pad')) {
     event.preventDefault();
+    removeSoundSelect();
     playButton(event.target.dataset.button);
   }
+}
+
+function removeSoundSelect() {
+  document.querySelectorAll('select.sound').forEach(e => e.remove());
 }
 
 async function playKey(event) {
@@ -66,7 +71,7 @@ async function playKey(event) {
     playButton(keys[event.code]);
   }
   if (event.key === 'Escape') {
-    document.querySelectorAll('select.sound').forEach(e => e.remove());
+    removeSoundSelect();
   }
 }
 
@@ -102,7 +107,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   const drumkit = document.getElementById('drumkit');
-  drumkit.addEventListener('click', playDrum);
+  drumkit.addEventListener('mousedown', playDrum);
   drumkit.addEventListener('touchstart', playDrum);
   const hammer = new Hammer(drumkit, {
     recognizers: [[Hammer.Press, { time: 1500 }]]
