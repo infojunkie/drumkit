@@ -1,21 +1,21 @@
-const DEFAULT_SOUNDFONT =  'Doumbek-Faisal';
-const DEFAULT_INSTRUMENT = 'doumbek';
-const DEFAULT_BUTTONS = {
+const DEFAULT_SOUNDFONT = 'Doumbek-Faisal';
+const DEFAULT_DRUMKIT = 'doumbek';
+const DEFAULT_BUTTONS = JSON.stringify({
   'b1': 60,
   'b2': 61,
   'b3': 62,
   'b4': 63,
   'b5': 64,
   'b6': 65
-};
+});
 
 // Available soundfonts
 let soundfonts = null;
 
 // Current values
 let soundfont = DEFAULT_SOUNDFONT;
-let instrument = DEFAULT_INSTRUMENT;
-let buttons = DEFAULT_BUTTONS;
+let drumkit = DEFAULT_DRUMKIT;
+let buttons = JSON.parse(DEFAULT_BUTTONS);
 let drums = null;
 
 async function loadSoundFonts() {
@@ -26,21 +26,21 @@ async function loadSoundFonts() {
   }
 }
 
-async function loadInstrument() {
+async function loadDrumkit() {
   return new Promise((resolve, reject) => {
-    Soundfont.instrument(new AudioContext(), instrument, { soundfont, nameToUrl: function(name, sf, format) {
+    Soundfont.instrument(new AudioContext(), drumkit, { soundfont, nameToUrl: function(name, sf, format) {
       format = format || 'mp3';
       return `sounds/${sf}/${name}-${format}.js`;
     }})
-    .then(instrument => {
-      resolve(instrument);
+    .then(drumkit => {
+      resolve(drumkit);
     });
   });
 }
 
 async function playButton(button) {
   if (!drums) {
-    drums = await loadInstrument();
+    drums = await loadDrumkit();
   }
   drums.play(buttons[button], 0, { gain: 10 });
 }
@@ -82,18 +82,57 @@ function selectDrum(event) {
     select.classList.add('sound');
     select.addEventListener('change', () => {
       buttons[event.target.dataset.button] = Number(select.options[select.selectedIndex].value);
+      if (storageAvailable('localStorage')) {
+        window.localStorage.setItem('buttons', JSON.stringify(buttons));
+      }
       removeSoundSelect();
     });
-    for (sound in soundfonts[soundfont][instrument]['sounds']) {
+    for (sound in soundfonts[soundfont][drumkit]['sounds']) {
       const option = document.createElement('option')
       option.value = sound;
-      option.text = soundfonts[soundfont][instrument]['sounds'][sound];
+      option.text = soundfonts[soundfont][drumkit]['sounds'][sound];
       option.disabled = Object.values(buttons).filter(s => s !== buttons[event.target.dataset.button]).includes(Number(sound));
       select.appendChild(option);
     }
     select.value = buttons[event.target.dataset.button];
     event.target.querySelectorAll('img.icon').forEach(e => e.hidden = true);
     event.target.appendChild(select);
+  }
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API
+function storageAvailable(type) {
+  let storage = null;
+  try {
+    storage = window[type];
+    const x = '__storage_test__';
+    storage.setItem(x, x);
+    storage.removeItem(x);
+    return true;
+  }
+  catch (e) {
+    console.error(`Problem accessing localStorage: ${e.toString()}`)
+    return e instanceof DOMException && (
+      // everything except Firefox
+      e.code === 22 ||
+      // Firefox
+      e.code === 1014 ||
+      // test name field too, because code might not be present
+      // everything except Firefox
+      e.name === 'QuotaExceededError' ||
+      // Firefox
+      e.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
+      // acknowledge QuotaExceededError only if there's something already stored
+      (storage && storage.length !== 0);
+  }
+}
+
+function restoreSettings() {
+  if (storageAvailable('localStorage')) {
+    const storage = window.localStorage;
+    soundfont = storage.getItem('soundfont') ?? DEFAULT_SOUNDFONT;
+    drumkit = storage.getItem('drumkit') ?? DEFAULT_DRUMKIT;
+    buttons = JSON.parse(storage.getItem('buttons') ?? DEFAULT_BUTTONS);
   }
 }
 
@@ -104,6 +143,12 @@ function setViewportHeight() {
 
 window.addEventListener('DOMContentLoaded', async () => {
   setViewportHeight();
+
+  // Load up the sounds.
+  await loadSoundFonts();
+  restoreSettings();
+
+  // Activate the UI.
   window.addEventListener('resize', () => {
     setTimeout(setViewportHeight, 100);
   });
@@ -116,6 +161,4 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   hammer.on('press', selectDrum);
   document.addEventListener('keydown', playKey);
-
-  await loadSoundFonts();
 });
