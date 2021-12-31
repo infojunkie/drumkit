@@ -82,8 +82,7 @@ function selectDrum(event) {
     select.classList.add('sound');
     select.addEventListener('change', () => {
       buttons[event.target.dataset.button] = Number(select.options[select.selectedIndex].value);
-      select.remove();
-      event.target.querySelectorAll('img.icon').forEach(e => e.hidden = false);
+      removeSoundSelect();
     });
     for (sound in soundfonts[soundfont][instrument]['sounds']) {
       const option = document.createElement('option')
