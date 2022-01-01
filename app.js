@@ -17,6 +17,7 @@ let soundfont = DEFAULT_SOUNDFONT;
 let drumkit = DEFAULT_DRUMKIT;
 let buttons = JSON.parse(DEFAULT_BUTTONS);
 let drums = null;
+let storage = null;
 
 async function loadSoundFonts() {
   if (!soundfonts) {
@@ -82,16 +83,17 @@ function selectDrum(event) {
     select.classList.add('sound');
     select.addEventListener('change', () => {
       buttons[event.target.dataset.button] = Number(select.options[select.selectedIndex].value);
-      if (storageAvailable('localStorage')) {
-        window.localStorage.setItem('buttons', JSON.stringify(buttons));
+      if (storage) {
+        storage.setItem('buttons', JSON.stringify(buttons));
       }
       removeSoundSelect();
     });
+    const sounds = Object.values(buttons).filter(s => s !== buttons[event.target.dataset.button]);
     for (sound in soundfonts[soundfont][drumkit]['sounds']) {
       const option = document.createElement('option')
       option.value = sound;
       option.text = soundfonts[soundfont][drumkit]['sounds'][sound];
-      option.disabled = Object.values(buttons).filter(s => s !== buttons[event.target.dataset.button]).includes(Number(sound));
+      option.disabled = sounds.includes(Number(sound));
       select.appendChild(option);
     }
     select.value = buttons[event.target.dataset.button];
@@ -101,18 +103,16 @@ function selectDrum(event) {
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API
-function storageAvailable(type) {
-  let storage = null;
+function setStorage(type) {
   try {
     storage = window[type];
     const x = '__storage_test__';
     storage.setItem(x, x);
     storage.removeItem(x);
-    return true;
   }
   catch (e) {
     console.error(`Problem accessing localStorage: ${e.toString()}`)
-    return e instanceof DOMException && (
+    if (e instanceof DOMException && (
       // everything except Firefox
       e.code === 22 ||
       // Firefox
@@ -123,13 +123,16 @@ function storageAvailable(type) {
       // Firefox
       e.name === 'NS_ERROR_DOM_QUOTA_REACHED') &&
       // acknowledge QuotaExceededError only if there's something already stored
-      (storage && storage.length !== 0);
+      (storage && storage.length !== 0)) {
+        // Accept the storage.
+      } else {
+        storage = null;
+      }
   }
 }
 
 function restoreSettings() {
-  if (storageAvailable('localStorage')) {
-    const storage = window.localStorage;
+  if (storage) {
     soundfont = storage.getItem('soundfont') ?? DEFAULT_SOUNDFONT;
     drumkit = storage.getItem('drumkit') ?? DEFAULT_DRUMKIT;
     buttons = JSON.parse(storage.getItem('buttons') ?? DEFAULT_BUTTONS);
@@ -142,7 +145,9 @@ function setViewportHeight() {
 }
 
 window.addEventListener('DOMContentLoaded', async () => {
+  // Initialization.
   setViewportHeight();
+  setStorage('localStorage');
 
   // Load up the sounds.
   await loadSoundFonts();
