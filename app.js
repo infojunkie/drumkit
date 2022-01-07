@@ -40,9 +40,6 @@ async function loadDrumkit() {
 }
 
 async function playButton(button) {
-  if (!drums) {
-    drums = await loadDrumkit();
-  }
   drums.play(buttons[button], 0, { gain: 10 });
 }
 
@@ -152,6 +149,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Load up the sounds.
   await loadSoundFonts();
   restoreSettings();
+  drums = await loadDrumkit();
 
   // Activate the UI.
   window.addEventListener('resize', () => {
