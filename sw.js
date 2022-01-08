@@ -1,4 +1,4 @@
-const version = "0.0.1";
+const version = '0.0.1';
 const cacheName = `drumkit-${version}`;
 
 self.addEventListener('install', event => {
@@ -11,7 +11,8 @@ self.addEventListener('install', event => {
         '/app.js',
         '/soundfont-player.min.js',
         '/hammer.min.js',
-        '/soundfonts.json'
+        '/soundfonts.json',
+        '/site.webmanifest'
       ])
       .then(() => self.skipWaiting());
     })
