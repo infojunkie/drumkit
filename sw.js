@@ -5,14 +5,14 @@ self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(cacheName).then(cache => {
       return cache.addAll([
-        '/',
-        '/index.html',
-        '/styles.css',
-        '/app.js',
-        '/soundfont-player.min.js',
-        '/hammer.min.js',
-        '/soundfonts.json',
-        '/site.webmanifest'
+        './',
+        './index.html',
+        './styles.css',
+        './app.js',
+        './soundfont-player.min.js',
+        './hammer.min.js',
+        './soundfonts.json',
+        './site.webmanifest'
       ])
       .then(() => self.skipWaiting());
     })
