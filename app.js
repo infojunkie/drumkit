@@ -8,7 +8,7 @@ const DEFAULT_BUTTONS = JSON.stringify({
   'b5': 64,
   'b6': 65
 });
-const LOOPER_INTERVAL = 50;
+const LOOPER_INTERVAL = 25;
 const LOOPER_AHEAD_TIME = 0.5;
 
 let drums = null;
@@ -128,10 +128,12 @@ function selectDrum(event) {
 async function looper() {
   if (loopState !== 'playing') return;
   if (loopNextTime < ac.currentTime + LOOPER_AHEAD_TIME) {
-    // Schedule all beats in current time slice.
-    const beats = loop.filter(b => b.when >= loopNextTime - loopStartTime && b.when < loopNextTime + LOOPER_AHEAD_TIME - loopStartTime);
-    beats.forEach(b => drums.play(buttons[b.button], loopStartTime + b.when, { gain: 5 }));
+    // Advance cursor immediately to avoid duplicate beat scheduling.
+    const thisTime = loopNextTime;
     loopNextTime += LOOPER_AHEAD_TIME;
+    // Schedule all beats in current time slice.
+    const beats = loop.filter(b => b.when >= thisTime - loopStartTime && b.when < thisTime + LOOPER_AHEAD_TIME - loopStartTime);
+    beats.forEach(b => drums.play(buttons[b.button], loopStartTime + b.when, { gain: 5 }));
     if (loopNextTime - loopStartTime >= loopDuration) {
       // We're done scheduling all the beats, but we need to wait until they've all been played.
       const wait = (loopStartTime + loopDuration - ac.currentTime) * 1000;
