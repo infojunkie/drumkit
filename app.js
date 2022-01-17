@@ -8,16 +8,21 @@ const DEFAULT_BUTTONS = JSON.stringify({
   'b5': 64,
   'b6': 65
 });
+const LOOPER_INTERVAL = 50;
+const LOOPER_AHEAD_TIME = 0.5;
 
-// Available soundfonts
+let drums = null;
+let storage = null;
 let soundfonts = null;
-
-// Current values
 let soundfont = DEFAULT_SOUNDFONT;
 let drumkit = DEFAULT_DRUMKIT;
 let buttons = JSON.parse(DEFAULT_BUTTONS);
-let drums = null;
-let storage = null;
+let ac = null;
+let loop = null;
+let loopState = null;
+let loopStartTime = null;
+let loopNextTime = null;
+let loopDuration = null;
 
 async function loadSoundFonts() {
   if (!soundfonts) {
@@ -29,7 +34,8 @@ async function loadSoundFonts() {
 
 async function loadDrumkit() {
   return new Promise((resolve, reject) => {
-    Soundfont.instrument(new AudioContext(), drumkit, { soundfont, nameToUrl: function(name, sf, format) {
+    ac = new AudioContext();
+    Soundfont.instrument(ac, drumkit, { soundfont, nameToUrl: function(name, sf, format) {
       format = format || 'mp3';
       return `sounds/${sf}/${name}-${format}.js`;
     }})
@@ -40,6 +46,9 @@ async function loadDrumkit() {
 }
 
 async function playButton(button) {
+  if (loopState === 'recording') {
+    loop.push({ button, when: ac.currentTime - loopStartTime });
+  }
   drums.play(buttons[button], 0, { gain: 10 });
 }
 
@@ -72,6 +81,23 @@ async function playKey(event) {
   if (event.key === 'Escape') {
     removeSoundSelect();
   }
+  if (event.key === ' ') {
+    if (loopState === 'recording') {
+      loopDuration = ac.currentTime - loopStartTime;
+      loopStartTime = loopNextTime = ac.currentTime;
+      loopState = 'playing';
+    }
+    else if (loopState === 'playing') {
+      loop = null;
+      loopState = null;
+    }
+    else {
+      loop = [];
+      loopState = 'recording';
+      loopStartTime = ac.currentTime;
+    }
+    console.log(`${loopState || 'idle'}...`);
+  }
 }
 
 function selectDrum(event) {
@@ -96,6 +122,23 @@ function selectDrum(event) {
     select.value = buttons[event.target.dataset.button];
     event.target.querySelectorAll('img.icon').forEach(e => e.hidden = true);
     event.target.appendChild(select);
+  }
+}
+
+async function looper() {
+  if (loopState !== 'playing') return;
+  if (loopNextTime < ac.currentTime + LOOPER_AHEAD_TIME) {
+    // Schedule all beats in current time slice.
+    const beats = loop.filter(b => b.when >= loopNextTime - loopStartTime && b.when < loopNextTime + LOOPER_AHEAD_TIME - loopStartTime);
+    beats.forEach(b => drums.play(buttons[b.button], loopStartTime + b.when, { gain: 5 }));
+    loopNextTime += LOOPER_AHEAD_TIME;
+    if (loopNextTime - loopStartTime >= loopDuration) {
+      // We're done scheduling all the beats, but we need to wait until they've all been played.
+      const wait = (loopStartTime + loopDuration - ac.currentTime) * 1000;
+      await new Promise(resolve => window.setTimeout(resolve, wait));
+      // Done waiting, restart loop.
+      loopStartTime = loopNextTime = ac.currentTime;
+    }
   }
 }
 
@@ -164,4 +207,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
   hammer.on('press', selectDrum);
   document.addEventListener('keydown', playKey);
+
+  // Start the playback loop.
+  window.setInterval(looper, LOOPER_INTERVAL);
 });
