@@ -19,7 +19,7 @@ let drumkit = DEFAULT_DRUMKIT;
 let buttons = JSON.parse(DEFAULT_BUTTONS);
 let ac = null;
 let loop = null;
-let loopState = null;
+let loopState = 'idle';
 let loopStartTime = null;
 let loopNextTime = null;
 let loopDuration = null;
@@ -89,14 +89,14 @@ async function playKey(event) {
     }
     else if (loopState === 'playing') {
       loop = null;
-      loopState = null;
+      loopState = 'idle';
     }
     else {
       loop = [];
       loopState = 'recording';
       loopStartTime = ac.currentTime;
     }
-    console.log(`${loopState || 'idle'}...`);
+    document.getElementById('mode').innerText = loopState;
   }
 }
 
@@ -197,6 +197,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   drums = await loadDrumkit();
 
   // Activate the UI.
+  document.getElementById('mode').innerText = loopState;
   window.addEventListener('resize', () => {
     setTimeout(setViewportHeight, 100);
   });
