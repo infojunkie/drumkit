@@ -10,6 +10,9 @@ const DEFAULT_BUTTONS = JSON.stringify({
 });
 const LOOPER_INTERVAL = 25;
 const LOOPER_AHEAD_TIME = 0.5;
+const MODE_IDLE = 'idle';
+const MODE_RECORDING = 'rec';
+const MODE_PLAYING = 'play';
 
 let drums = null;
 let storage = null;
@@ -19,7 +22,7 @@ let drumkit = DEFAULT_DRUMKIT;
 let buttons = JSON.parse(DEFAULT_BUTTONS);
 let ac = null;
 let loop = null;
-let loopState = 'idle';
+let loopMode = MODE_IDLE;
 let loopStartTime = null;
 let loopNextTime = null;
 let loopDuration = null;
@@ -46,7 +49,7 @@ async function loadDrumkit() {
 }
 
 async function playButton(button) {
-  if (loopState === 'recording') {
+  if (loopMode === MODE_RECORDING) {
     loop.push({ button, when: ac.currentTime - loopStartTime });
   }
   drums.play(buttons[button], 0, { gain: 10 });
@@ -82,21 +85,21 @@ async function playKey(event) {
     removeSoundSelect();
   }
   if (event.key === ' ') {
-    if (loopState === 'recording') {
+    if (loopMode === MODE_RECORDING) {
       loopDuration = ac.currentTime - loopStartTime;
       loopStartTime = loopNextTime = ac.currentTime;
-      loopState = 'playing';
+      loopMode = MODE_PLAYING;
     }
-    else if (loopState === 'playing') {
+    else if (loopMode === MODE_PLAYING) {
       loop = null;
-      loopState = 'idle';
+      loopMode = MODE_IDLE;
     }
     else {
       loop = [];
-      loopState = 'recording';
+      loopMode = MODE_RECORDING;
       loopStartTime = ac.currentTime;
     }
-    document.getElementById('mode').innerText = loopState;
+    document.getElementById('mode').innerText = loopMode;
   }
 }
 
@@ -126,7 +129,7 @@ function selectDrum(event) {
 }
 
 async function looper() {
-  if (loopState !== 'playing') return;
+  if (loopMode !== MODE_PLAYING) return;
   if (loopNextTime < ac.currentTime + LOOPER_AHEAD_TIME) {
     // Advance cursor immediately to avoid duplicate beat scheduling.
     const thisTime = loopNextTime;
@@ -197,7 +200,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   drums = await loadDrumkit();
 
   // Activate the UI.
-  document.getElementById('mode').innerText = loopState;
+  document.getElementById('mode').innerText = loopMode;
   window.addEventListener('resize', () => {
     setTimeout(setViewportHeight, 100);
   });
