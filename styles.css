@@ -39,3 +39,8 @@ body {
 select.sound {
     font-size: larger;
 }
+@media (max-width:1025px) {
+    a#github {
+        display: none;
+    }
+}
