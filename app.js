@@ -152,14 +152,13 @@ function selectDrum(event) {
 }
 
 async function looper() {
-  if (loopMode !== MODE_PLAYING) return;
-  if (loopNextTime < ac.currentTime + LOOPER_AHEAD_TIME) {
+  if (loopMode === MODE_PLAYING && loopNextTime < ac.currentTime + LOOPER_AHEAD_TIME) {
     // Advance cursor immediately to avoid duplicate beat scheduling.
     const thisTime = loopNextTime;
     loopNextTime += LOOPER_AHEAD_TIME;
     // Schedule all beats in current time slice.
     const beats = loop.filter(b => b.when >= thisTime - loopStartTime && b.when < thisTime + LOOPER_AHEAD_TIME - loopStartTime);
-    beats.forEach(b => drums.play(buttons[b.button], loopStartTime + b.when, { gain: 5 }));
+    beats.forEach(b => drums.play(buttons[b.button], loopStartTime + b.when, { gain: 10 }));
     if (loopNextTime - loopStartTime >= loopDuration) {
       // We're done scheduling all the beats, but we need to wait until they've all been played.
       const wait = (loopStartTime + loopDuration - ac.currentTime) * 1000;
@@ -168,6 +167,7 @@ async function looper() {
       loopStartTime = loopNextTime = ac.currentTime;
     }
   }
+  window.setTimeout(looper, LOOPER_INTERVAL);
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API
@@ -240,5 +240,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Start the playback loop.
-  window.setInterval(looper, LOOPER_INTERVAL);
+  window.setTimeout(looper, LOOPER_INTERVAL);
 });
