@@ -10,9 +10,11 @@ const DEFAULT_BUTTONS = JSON.stringify({
 });
 const LOOPER_INTERVAL = 25;
 const LOOPER_AHEAD_TIME = 0.5;
+const LOOPER_COUNTDOWN = 4.0;
 const MODE_IDLE = 'idle';
 const MODE_RECORDING = 'rec';
 const MODE_PLAYING = 'play';
+const MODE_COUNTING = 'count';
 
 let drums = null;
 let storage = null;
@@ -91,8 +93,29 @@ async function playKey(event) {
   }
 }
 
+function clickMode(event) {
+  event.preventDefault();
+  toggleMode();
+}
+
+function counter() {
+  updateMode();
+  if (ac.currentTime - loopStartTime >= LOOPER_COUNTDOWN) {
+    toggleMode();
+  }
+  else {
+    window.setTimeout(counter, LOOPER_INTERVAL);
+  }
+}
+
 function toggleMode() {
-  if (loopMode === MODE_RECORDING) {
+  ac.resume();
+  if (loopMode === MODE_COUNTING) {
+    loop = [];
+    loopMode = MODE_RECORDING;
+    loopStartTime = ac.currentTime;
+  }
+  else if (loopMode === MODE_RECORDING) {
     loopDuration = ac.currentTime - loopStartTime;
     loopStartTime = loopNextTime = ac.currentTime;
     loopMode = MODE_PLAYING;
@@ -101,17 +124,12 @@ function toggleMode() {
     loop = null;
     loopMode = MODE_IDLE;
   }
-  else {
-    loop = [];
-    loopMode = MODE_RECORDING;
+  else if (loopMode === MODE_IDLE) {
+    loopMode = MODE_COUNTING;
     loopStartTime = ac.currentTime;
+    window.setTimeout(counter, LOOPER_INTERVAL);
   }
   updateMode();
-}
-
-function clickMode(event) {
-  event.preventDefault();
-  toggleMode();
 }
 
 function updateMode() {
@@ -123,6 +141,11 @@ function updateMode() {
       mode.innerText = '⏺'; break;
     case MODE_PLAYING:
       mode.innerText = '▶'; break;
+    case MODE_COUNTING:
+      const elapsed = ac.currentTime - loopStartTime;
+      const seconds = Math.floor(elapsed);
+      const decimal = (elapsed - seconds >= 0.5) ? '.' : '';
+      mode.innerText = `${LOOPER_COUNTDOWN - seconds}${decimal}`;
   }
 }
 

@@ -1,4 +1,4 @@
-const VERSION = '10';
+const VERSION = '11';
 const CACHE_NAME = `drumkit-${VERSION}`;
 
 self.addEventListener('install', event => {
