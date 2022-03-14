@@ -93,7 +93,7 @@ async function playKey(event) {
   }
 }
 
-function clickMode(event) {
+async function clickMode(event) {
   event.preventDefault();
   toggleMode();
 }
@@ -101,16 +101,15 @@ function clickMode(event) {
 function counter() {
   updateMode();
   if (ac.currentTime - loopStartTime >= LOOPER_COUNTDOWN) {
-    toggleMode();
+    toggleMode(true);
   }
   else {
     window.setTimeout(counter, LOOPER_INTERVAL);
   }
 }
 
-function toggleMode() {
-  ac.resume();
-  if (loopMode === MODE_COUNTING) {
+function toggleMode(fromCounter = false) {
+  if (fromCounter && loopMode === MODE_COUNTING) {
     loop = [];
     loopMode = MODE_RECORDING;
     loopStartTime = ac.currentTime;
@@ -235,6 +234,12 @@ function setViewportHeight() {
   document.documentElement.style.setProperty('--vh', `${vh}px`);
 }
 
+function audioContextEventWrapper(callback) {
+  return async function(event) {
+    ac.resume().then(() => callback(event));
+  }
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
   // Initialization.
   setViewportHeight();
@@ -248,19 +253,17 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Activate the UI.
   updateMode();
   const mode = document.getElementById('mode');
-  mode.addEventListener('mousedown', clickMode);
-  mode.addEventListener('touchstart', clickMode);
+  mode.addEventListener('mousedown', audioContextEventWrapper(clickMode));
+  mode.addEventListener('touchstart', audioContextEventWrapper(clickMode));
   const drumkit = document.getElementById('drumkit');
-  drumkit.addEventListener('mousedown', playDrum);
-  drumkit.addEventListener('touchstart', playDrum);
+  drumkit.addEventListener('mousedown', audioContextEventWrapper(playDrum));
+  drumkit.addEventListener('touchstart', audioContextEventWrapper(playDrum));
   const hammer = new Hammer(drumkit, {
     recognizers: [[Hammer.Press, { time: 1500 }]]
   });
   hammer.on('press', selectDrum);
-  document.addEventListener('keydown', playKey);
-  window.addEventListener('resize', () => {
-    setTimeout(setViewportHeight, 100);
-  });
+  document.addEventListener('keydown', audioContextEventWrapper(playKey));
+  window.addEventListener('resize', () => setTimeout(setViewportHeight, 100));
 
   // Start the playback loop.
   window.setTimeout(looper, LOOPER_INTERVAL);
