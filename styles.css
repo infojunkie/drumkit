@@ -18,9 +18,15 @@ body {
     margin-bottom: 10px;
     margin-left: 10px;
     font-size: larger;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
 }
-#mode {
+.item {
+    flex: 0 0 auto;
     cursor: pointer;
+    padding-right: 10px;
 }
 #drumkit {
     grid-column: 1 / 1;

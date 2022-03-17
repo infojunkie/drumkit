@@ -8,13 +8,15 @@ const DEFAULT_BUTTONS = JSON.stringify({
   'b5': 64,
   'b6': 65
 });
-const LOOPER_INTERVAL = 25;
-const LOOPER_AHEAD_TIME = 0.5;
-const LOOPER_COUNTDOWN = 4.0;
+const LOOPER_INTERVAL_MSEC = 25;
+const LOOPER_AHEAD_TIME_SEC = 0.5;
+const LOOPER_COUNTDOWN_SEC = 4.0;
 const MODE_IDLE = 'idle';
 const MODE_RECORDING = 'rec';
 const MODE_PLAYING = 'play';
 const MODE_COUNTING = 'count';
+const EVENT_USER = 'user';
+const EVENT_COUNTER = 'counter';
 
 let drums = null;
 let storage = null;
@@ -23,7 +25,7 @@ let soundfont = DEFAULT_SOUNDFONT;
 let drumkit = DEFAULT_DRUMKIT;
 let buttons = JSON.parse(DEFAULT_BUTTONS);
 let ac = null;
-let loop = null;
+let loop = [];
 let loopMode = MODE_IDLE;
 let loopStartTime = null;
 let loopNextTime = null;
@@ -89,49 +91,69 @@ async function playKey(event) {
   }
   if (event.key === ' ') {
     event.preventDefault();
-    toggleMode();
+    transitionMode();
   }
 }
 
 async function clickMode(event) {
   event.preventDefault();
-  toggleMode();
+  transitionMode();
+}
+
+async function clickPlay(event) {
+  event.preventDefault();
+
+  // Force playing.
+  loopStartTime = loopNextTime = ac.currentTime;
+  loopMode = MODE_PLAYING;
+  displayMode();
 }
 
 function counter() {
-  updateMode();
-  if (ac.currentTime - loopStartTime >= LOOPER_COUNTDOWN) {
-    toggleMode(true);
+  displayMode();
+  if (loopMode !== MODE_COUNTING) {
+    return;
+  }
+  else if (ac.currentTime - loopStartTime >= LOOPER_COUNTDOWN_SEC) {
+    transitionMode(EVENT_COUNTER);
   }
   else {
-    window.setTimeout(counter, LOOPER_INTERVAL);
+    window.setTimeout(counter, LOOPER_INTERVAL_MSEC);
   }
 }
 
-function toggleMode(fromCounter = false) {
-  if (fromCounter && loopMode === MODE_COUNTING) {
+// Looper state machine.
+function transitionMode(event = EVENT_USER) {
+  if (event === EVENT_COUNTER && loopMode === MODE_COUNTING) {
+    // Done countdown, do record.
     loop = [];
     loopMode = MODE_RECORDING;
     loopStartTime = ac.currentTime;
   }
+  else if (event === EVENT_USER && loopMode === MODE_COUNTING) {
+    // Abort countdown, go back to idle.
+    loopMode = MODE_IDLE;
+  }
   else if (loopMode === MODE_RECORDING) {
+    // Done recording, do playback.
     loopDuration = ac.currentTime - loopStartTime;
     loopStartTime = loopNextTime = ac.currentTime;
     loopMode = MODE_PLAYING;
   }
   else if (loopMode === MODE_PLAYING) {
-    loop = null;
+    // Done playing, go back to idle.
     loopMode = MODE_IDLE;
   }
   else if (loopMode === MODE_IDLE) {
+    // Start countdown.
     loopMode = MODE_COUNTING;
     loopStartTime = ac.currentTime;
-    window.setTimeout(counter, LOOPER_INTERVAL);
+    window.setTimeout(counter, LOOPER_INTERVAL_MSEC);
   }
-  updateMode();
+  displayMode();
 }
 
-function updateMode() {
+function displayMode() {
   const mode = document.getElementById('mode');
   switch (loopMode) {
     case MODE_IDLE:
@@ -143,9 +165,11 @@ function updateMode() {
     case MODE_COUNTING:
       const elapsed = ac.currentTime - loopStartTime;
       const seconds = Math.floor(elapsed);
-      const decimal = (elapsed - seconds >= 0.5) ? '.' : '';
-      mode.innerText = `${LOOPER_COUNTDOWN - seconds}${decimal}`;
+      const quarters = '.'.repeat(Math.floor(4.0 * (elapsed - seconds)));
+      mode.innerText = `${LOOPER_COUNTDOWN_SEC - seconds}${quarters}`;
   }
+  const play = document.querySelector('#play button');
+  play.style.visibility = loop.length > 0 && [MODE_IDLE, MODE_PLAYING].includes(loopMode) ? 'visible' : 'hidden';
 }
 
 function selectDrum(event) {
@@ -174,22 +198,22 @@ function selectDrum(event) {
 }
 
 async function looper() {
-  if (loopMode === MODE_PLAYING && loopNextTime < ac.currentTime + LOOPER_AHEAD_TIME) {
+  if (loopMode === MODE_PLAYING && loopNextTime < ac.currentTime + LOOPER_AHEAD_TIME_SEC) {
     // Advance cursor immediately to avoid duplicate beat scheduling.
     const thisTime = loopNextTime;
-    loopNextTime += LOOPER_AHEAD_TIME;
+    loopNextTime += LOOPER_AHEAD_TIME_SEC;
     // Schedule all beats in current time slice.
-    const beats = loop.filter(b => b.when >= thisTime - loopStartTime && b.when < thisTime + LOOPER_AHEAD_TIME - loopStartTime);
+    const beats = loop.filter(b => b.when >= thisTime - loopStartTime && b.when < thisTime + LOOPER_AHEAD_TIME_SEC - loopStartTime);
     beats.forEach(b => drums.play(buttons[b.button], loopStartTime + b.when, { gain: 10 }));
     if (loopNextTime - loopStartTime >= loopDuration) {
       // We're done scheduling all the beats, but we need to wait until they've all been played.
-      const wait = (loopStartTime + loopDuration - ac.currentTime) * 1000;
+      const wait = (loopStartTime + loopDuration - ac.currentTime) * 1000 - LOOPER_INTERVAL_MSEC;
       await new Promise(resolve => window.setTimeout(resolve, wait));
       // Done waiting, restart loop.
       loopStartTime = loopNextTime = ac.currentTime;
     }
   }
-  window.setTimeout(looper, LOOPER_INTERVAL);
+  window.setTimeout(looper, LOOPER_INTERVAL_MSEC);
 }
 
 // https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API
@@ -251,10 +275,13 @@ window.addEventListener('DOMContentLoaded', async () => {
   drums = await loadDrumkit();
 
   // Activate the UI.
-  updateMode();
+  displayMode();
   const mode = document.getElementById('mode');
   mode.addEventListener('mousedown', audioContextEventWrapper(clickMode));
   mode.addEventListener('touchstart', audioContextEventWrapper(clickMode));
+  const play = document.querySelector('#play button');
+  play.addEventListener('mousedown', audioContextEventWrapper(clickPlay));
+  play.addEventListener('touchstart', audioContextEventWrapper(clickPlay));
   const drumkit = document.getElementById('drumkit');
   drumkit.addEventListener('mousedown', audioContextEventWrapper(playDrum));
   drumkit.addEventListener('touchstart', audioContextEventWrapper(playDrum));
@@ -266,5 +293,5 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('resize', () => setTimeout(setViewportHeight, 100));
 
   // Start the playback loop.
-  window.setTimeout(looper, LOOPER_INTERVAL);
+  window.setTimeout(looper, LOOPER_INTERVAL_MSEC);
 });
